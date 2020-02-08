@@ -8,7 +8,7 @@ metadata:
     iconClass: icon-jenkins
     tags: instant-app,jenkins,gogs,nexus,cicd
   name: cicd
-message: "Use the following credentials for login:\nJenkins: use your OpenShift credentials\nNexus: admin/admin123\nSonarQube: admin/admin\nGogs Git Server: gogs/gogs"
+message: "Use the following credentials for login:\nJenkins: use your OpenShift credentials\nNexus: admin/admin123\nGogs Git Server: gogs/gogs"
 parameters:
 - displayName: DEV project name
   value: dev
@@ -103,13 +103,6 @@ objects:
                 steps {
                   sh "${mvnCmd} test"
                   step([$class: 'JUnitResultArchiver', testResults: '**/target/surefire-reports/TEST-*.xml'])
-                }
-              }
-              stage('Code Analysis') {
-                steps {
-                  script {
-                    sh "${mvnCmd} sonar:sonar -Dsonar.host.url=http://sonarqube:9000 -DskipTests=true"
-                  }
                 }
               }
               stage('Archive App') {
@@ -350,15 +343,6 @@ objects:
             sleep 5
 
             if [ "${EPHEMERAL}" == "true" ] ; then
-              oc new-app -f https://raw.githubusercontent.com/siamaksade/sonarqube/master/sonarqube-template.yml --param=SONARQUBE_MEMORY_LIMIT=2Gi
-            else
-              oc new-app -f https://raw.githubusercontent.com/siamaksade/sonarqube/master/sonarqube-persistent-template.yml --param=SONARQUBE_MEMORY_LIMIT=2Gi
-            fi
-
-            oc set resources dc/sonardb --limits=cpu=200m,memory=512Mi --requests=cpu=50m,memory=128Mi
-            oc set resources dc/sonarqube --limits=cpu=1,memory=2Gi --requests=cpu=50m,memory=128Mi
-
-            if [ "${EPHEMERAL}" == "true" ] ; then
               oc new-app -f https://raw.githubusercontent.com/OpenShiftDemos/nexus/master/nexus3-template.yaml --param=NEXUS_VERSION=3.13.0 --param=MAX_MEMORY=2Gi
             else
               oc new-app -f https://raw.githubusercontent.com/OpenShiftDemos/nexus/master/nexus3-persistent-template.yaml --param=NEXUS_VERSION=3.13.0 --param=MAX_MEMORY=2Gi
@@ -430,8 +414,6 @@ objects:
               exit 255
             fi
 
-            oc label dc sonarqube "app.kubernetes.io/part-of"="sonarqube" --overwrite
-            oc label dc sonardb "app.kubernetes.io/part-of"="sonarqube" --overwrite
             oc label dc jenkins "app.kubernetes.io/part-of"="jenkins" --overwrite
             oc label dc nexus "app.kubernetes.io/part-of"="nexus" --overwrite
             oc label dc gogs "app.kubernetes.io/part-of"="gogs" --overwrite
